@@ -1,0 +1,4 @@
+{
+    "python.linting.enabled": false,
+    "python.pythonPath": "/Users/bruno/anaconda3/envs/lissandra/bin/python"
+}

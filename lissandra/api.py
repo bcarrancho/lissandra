@@ -1,21 +1,13 @@
 import logging
 
-ENDPOINTS = {"BR": "br1",
-        "EUNE": "eun1",
-        "EUW": "euw1",
-        "JP": "jp1",
-        "KR": "kr",
-        "LAN": "la1",
-        "LAS": "la2",
-        "NA": "na1",
-        "OCE": "oc1",
-        "TR": "tr1",
-        "RU": "ru"}
-REGIONS = ENDPOINTS.keys()
+import lissandra
+from common import REGIONS
+from common import ENDPOINTS
+
 
 async def api_call(fw, url):
-    header = {"X-Riot-Token": fw.api_key}
-    async with fw.session.get(url, headers=header) as resp:
+    header = {"X-Riot-Token": lissandra.api_key}
+    async with lissandra.session.get(url, headers=header) as resp:
         json = None
         # Parse response
         if resp.status == 200:
@@ -34,43 +26,28 @@ async def api_call(fw, url):
             retry_after = 30
         
         if retry_after is not None:
-            fw.lim.update_resetter(retry_after)
-            fw.loop.create_task(fw.lim.call(api_call, fw, url))
+            lissandra.limiter.update_resetter(retry_after)
+            lissandra.loop.create_task(lissandra.limiter.call(api_call, fw, url))
         
         return (fw, resp.url, resp.status, resp.headers, retry_after, json)
 
 
 async def get_challenger(fw, queue):
-    url = "https://" +
-        ENDPOINTS[fw.region] +
-        ".api.riotgames.com/lol/league/v3/challengerleagues/by-queue/" +
-        queue
-    return await fw.lim.call(api_call, fw, url)
+    url = "https://" + ENDPOINTS[lissandra.region] + ".api.riotgames.com/lol/league/v3/challengerleagues/by-queue/" + queue
+    return await lissandra.limiter.call(api_call, fw, url)
 
 async def get_master(fw, queue):
-    url = "https://" +
-        ENDPOINTS[fw.region] +
-        ".api.riotgames.com/lol/league/v3/masterleagues/by-queue/" +
-        queue
-    return await fw.lim.call(api_call, fw, url)
+    url = "https://" + ENDPOINTS[lissandra.region] + ".api.riotgames.com/lol/league/v3/masterleagues/by-queue/" + queue
+    return await lissandra.limiter.call(api_call, fw, url)
 
 async def get_match(fw, mid):
-    url = "https://" +
-        ENDPOINTS[fw.region] +
-        ".api.riotgames.com/lol/match/v3/matches/"
-        + str(mid)
-    return await fw.lim.call(api_call, fw, url)
+    url = "https://" + ENDPOINTS[lissandra.region] + ".api.riotgames.com/lol/match/v3/matches/" + str(mid)
+    return await lissandra.limiter.call(api_call, fw, url)
 
 async def get_matchlist(fw, aid):
-    url = "https://" +
-        ENDPOINTS[fw.region] +
-        ".api.riotgames.com/lol/match/v3/matchlists/by-account/" +
-        str(aid)
-    return await fw.lim.call(api_call, fw, url)
+    url = "https://" + ENDPOINTS[lissandra.region] + ".api.riotgames.com/lol/match/v3/matchlists/by-account/" + str(aid)
+    return await lissandra.limiter.call(api_call, fw, url)
 
 async def get_summoner(fw, sid):
-    url = "https://" +
-        ENDPOINTS[fw.region] +
-        ".api.riotgames.com/lol/summoner/v3/summoners/" +
-        str(sid)
-    return await fw.lim.call(api_call, fw, url)
+    url = "https://" + ENDPOINTS[lissandra.region] + ".api.riotgames.com/lol/summoner/v3/summoners/" + str(sid)
+    return await lissandra.limiter.call(api_call, fw, url)

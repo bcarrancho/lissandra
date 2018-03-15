@@ -3,11 +3,17 @@ import asyncio
 import logging
 from pathlib import Path
 import os
+import signal
 import sys
+
+import aiohttp
 
 import lissandra
 from limiter import MultiRateLimiter
 from common import REGIONS
+from db import DBMatch
+from db import DBMatchlist
+from tasks.manager import Manager
 
 def main(parameters):
     lissandra.key = parameters["key"]
@@ -16,9 +22,12 @@ def main(parameters):
 
     # Instantiate a limiter with development limits
     lissandra.limiter = MultiRateLimiter((20, 1), (100, 120))
+
     lissandra.queue_sid = asyncio.Queue(loop=lissandra.loop)
     lissandra.queue_mid = asyncio.Queue(loop=lissandra.loop)
     lissandra.queue_aid = asyncio.Queue(loop=lissandra.loop)
+
+    lissandra.exiting = False
 
     # Initialize data directory structure
     lissandra.dir_data = Path('.', 'data')
@@ -36,8 +45,49 @@ def main(parameters):
         sys.exit(3)
 
     # Initialize databases
+    lissandra.fname_db_match = Path(
+        lissandra.dir_db, "db-disc-match-" +
+        lissandra.region.lower() + ".sqlite")
+    lissandra.fname_db_matchlist = Path(
+        lissandra.dir_db, "db-disc-matchlist-" +
+        lissandra.region.lower() + ".sqlite")
+    lissandra.fname_db_summoner = Path(
+        lissandra.dir_db, "db-disc-summoner-" +
+        lissandra.region.lower() + ".sqlite")
+
+    lissandra.db_match = DBMatch(lissandra.fname_db_match)
+    lissandra.db_matchlist = DBMatchlist(lissandra.fname_db_matchlist)
+
+    # Initialize tasks
+    lissandra.tasks = {}
+    lissandra.tasks["mgr"] = None # Manager
+    lissandra.tasks["req"] = None # Request
+    lissandra.tasks["dsp"] = None # Dispatch
+    lissandra.tasks["fls"] = None # Flush
+    lissandra.tasks["rpt"] = None # Status report
+
+    # Sets signal handler
+    lissandra.loop.add_signal_handler(signal.SIGINT, shutdown)
+
+    lissandra.loop.run_until_complete(run())
+    logging.info("Terminated")
 
 
+async def run():
+    async with aiohttp.ClientSession(loop=lissandra.loop) as lissandra.session:
+        lissandra.manager = Manager()
+        lissandra.tasks["mgr"] = lissandra.loop.create_task(
+            lissandra.manager.run())
+
+        await asyncio.wait(
+            [t for t in lissandra.tasks.values() if t is not None],
+            loop=lissandra.loop, return_when="ALL_COMPLETED")
+
+
+def shutdown():
+    #print("\r   \r")
+    logging.info("Received shutdown signal")
+    lissandra.exiting = True
 
 if __name__ == "__main__":
     # Parse arguments and start main()
@@ -72,21 +122,21 @@ if __name__ == "__main__":
 
     parameters = {}
 
-    # Initializes fundamental variables.
-    # Initializes API key.
+    # Initializes fundamental variables
+    # Initializes API key
     if args.key is not None:
         logging.info("API key set by command-line argument.")
         parameters["key"] = args.key
     else:
         try:
-            parameters["key"] = os.environ["API_KEY"]
+            parameters["key"] = os.environ["RIOT_API_KEY"]
             logging.info("API key set by environment variable DEV_KEY.")
         except KeyError:
             logging.error(
                 "API key was not set. Set key with -k argument or set environment variable DEV_KEY.")
             sys.exit(2)
 
-    # Initializes region.
+    # Initializes region
     if args.region is None:
         logging.error("Region not set. Set region with -r argument.")
         sys.exit(2)
@@ -94,5 +144,5 @@ if __name__ == "__main__":
         logging.info("Region set to {0}.".format(args.region[0].upper()))
         parameters["region"] = args.region[0]
 
-    # Calls main().
+    # Calls main()
     main(parameters)
