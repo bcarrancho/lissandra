@@ -7,11 +7,12 @@ import signal
 import sys
 
 import aiohttp
+import aiosqlite
 
-#from common import REGIONS
+import lissandra
 from client import APIClient
 
-exiting = False
+lissandra.exiting = False
 
 def main():
     try:
@@ -29,6 +30,7 @@ def main():
 
     args = parser.parse_args()
 
+    # Sets logging
     if args.verbose:
         logging.basicConfig(
             format='%(asctime)s: %(message)s',
@@ -37,6 +39,8 @@ def main():
         logging.basicConfig(
             format='%(asctime)s: %(message)s',
             level=logging.INFO, datefmt='%d/%m/%Y %H:%M:%S')
+    logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
 
     # Initializes fundamental variables
     # Initializes API key
@@ -76,7 +80,7 @@ async def run(parameters):
             clients[region] = APIClient(
                 region, session, parameters["key"], parameters["data_path"])
         # Await until ctrl+c
-        while not exiting:
+        while not lissandra.exiting:
             await asyncio.sleep(1)
 
         # Exiting, shutdown nicely
@@ -87,7 +91,7 @@ async def run(parameters):
 
 def shutdown():
     logging.info("Received shutdown signal")
-    exiting = True
+    lissandra.exiting = True
 
 if __name__ == "__main__":
     main()

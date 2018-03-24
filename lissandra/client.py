@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from limiter import MultiRateLimiter
+from tasks.manager import Manager
 from db import DBMatch
 from db import DBMatchlist
 
@@ -48,9 +49,11 @@ class APIClient(object):
         self.db_match = DBMatch(self.fname_db_match)
         self.db_matchlist = DBMatchlist(self.fname_db_matchlist)
 
+        self.manager = Manager(self)
+        
         # Initialize tasks
         self.tasks = {}
-        self.tasks["mgr"] = None # Manager
+        self.tasks["mgr"] = self.loop.create_task(self.manager.run())
         self.tasks["req"] = None # Request
         self.tasks["dsp"] = None # Dispatch
         self.tasks["fls"] = None # Flush

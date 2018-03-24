@@ -15,10 +15,6 @@
             "cwd": "${workspaceFolder}",
             "env": {},
             "envFile": "${workspaceFolder}/.env",
-            "args": [
-                "-r",
-                "BR"
-            ],
             "debugOptions": [
                 "RedirectOutput"
             ]

@@ -28,13 +28,11 @@ class DBMatch(object):
             return cursor.rowcount if cursor is not None else None
             
     async def count(self, table_name):
-        logging.debug("Opening db {n}".format(n=str(self.fname)))
         async with aiosqlite.connect(str(self.fname)) as db:
             query = 'SELECT COUNT(*) FROM "' + table_name + '"'
             cursor = await db.execute(query)
             if cursor is not None:
                 res = await cursor.fetchone()
-                logging.warning(res)
             return res[0] if cursor is not None else None
 
 

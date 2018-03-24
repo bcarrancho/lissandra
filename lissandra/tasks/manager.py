@@ -1,47 +1,30 @@
 import asyncio
 import logging
 
-import lissandra
 from tasks.dispatch import Dispatch
-from tasks.request import Request
-#from tasks.report import Report
-#from tasks.flush import Flush
+#from tasks.request import Request
 
 
 class Manager(object):
-    def __init__(self):
-        pass
+    def __init__(self, client):
+        self.client = client
     
+
     def start_dispatch(self):
-        lissandra.dispatch = Dispatch()
-        lissandra.tasks["dsp"] = lissandra.loop.create_task(
-            lissandra.dispatch.run())
-
-
-    def start_request(self):
-        lissandra.request = Request()
-        lissandra.tasks["req"] = lissandra.loop.create_task(
-            lissandra.request.run())
-
-
-    def start_flush(self):
-        lissandra.flush = Flush()
-        lissandra.tasks["fls"] = lissandra.loop.create_task(
-            lissandra.flush.run())
-
-
-    def start_report(self):
-        lissandra.report = Report()
-        lissandra.tasks["rpt"] = lissandra.loop.create_task(
-            lissandra.report.run())
+        self.client.dispatch = Dispatch(self.client)
+        self.client.tasks["dsp"] = self.client.loop.create_task(
+            self.client.dispatch.run())
 
 
     async def run(self):
-        logging.debug("Manager started")
+        logging.debug("{r}: Manager started".format(r=self.client.region))
         self.start_dispatch()
         #self.start_request()
         #self.start_flush()
         #self.start_report()
-        while not lissandra.exiting:
+        while not self.client.exiting:
             await asyncio.sleep(5)
-        logging.debug("Manager terminated")
+        await self.client.tasks["dsp"]
+        
+        logging.debug("{r}: Manager terminated".format(r=self.client.region))
+        self.client.shutdown.set()
