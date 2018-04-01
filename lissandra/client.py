@@ -4,8 +4,7 @@ from pathlib import Path
 
 from limiter import MultiRateLimiter
 from tasks.manager import Manager
-from db import DBMatch
-from db import DBMatchlist
+from db import DBMatch, DBMatchlist, DBSummoner
 
 class APIClient(object):
     def __init__(self, region, session, key, data_path):
@@ -48,6 +47,7 @@ class APIClient(object):
 
         self.db_match = DBMatch(self.fname_db_match)
         self.db_matchlist = DBMatchlist(self.fname_db_matchlist)
+        self.db_summoner = DBSummoner(self.fname_db_summoner)
 
         self.manager = Manager(self)
         
