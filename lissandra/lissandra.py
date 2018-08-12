@@ -12,6 +12,7 @@ import aiosqlite
 import lissandra
 from client import APIClient
 
+# Test
 lissandra.exiting = False
 
 def main():
